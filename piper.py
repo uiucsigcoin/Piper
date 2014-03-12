@@ -27,7 +27,7 @@ from Adafruit_Thermal import *
 def print_seed(seed):
 
 	printer = Adafruit_Thermal("/dev/ttyAMA0", 19200, timeout=5)
-
+	printer.begin(200)
 
 	printer.println(seed)
 	
@@ -44,30 +44,18 @@ def print_keypair(pubkey, privkey, leftBorderText):
 
 #open the printer itself
 	printer = Adafruit_Thermal("/dev/ttyAMA0", 19200, timeout=5)
-
+	printer.begin(200)
 #check the cointype to decide which background to use
-	con = None
-	try:
-		con = sqlite3.connect('/home/pi/Printer/settings.db3')
-		cur = con.cursor()
-		cur.execute("SELECT CoinFormats.bgfile, CoinFormats.name FROM Settings, CoinFormats WHERE Settings.key='cointype' and Settings.value = CoinFormats.name;")
-		row = cur.fetchone()
-		finalImgName = row[0]
-		coinName = row[1]
-	except sqlite3.Error, e:
-		print("Error %s:" % e.args[0])
-		sys.exit(1)
-	finally:
-		if con:
-			con.commit()
-			con.close()
+	finalImgName = "btc"
+	coinName = "btc"
 	printCoinName = (finalImgName == "blank")
 
 	finalImgName += "-wallet"
 #load a blank image of the paper wallet with no QR codes or keys on it which we will draw on
 	if(len(privkey) > 51):
 		finalImgName += "-enc"
-
+	else:
+		finalImgName += "-blank"
 	finalImgName += ".bmp"
 	
 	finalImgFolder = "/home/pi/Printer/Images/"
@@ -102,7 +90,7 @@ def print_keypair(pubkey, privkey, leftBorderText):
 		draw.text((45, 400), coinName, font=font, fill=(0,0,0))
 
 
-	font = ImageFont.truetype("/usr/share/fonts/ttf/ubuntu-font-family-0.80/UbuntuMono-R.ttf", 20)
+	font = ImageFont.truetype("/usr/share/fonts/truetype/droid/DroidSansMono.ttf", 20)
 	startPos=(110,38)
 	charDist=15
 	lineHeight=23
@@ -208,9 +196,9 @@ def print_keypair(pubkey, privkey, leftBorderText):
 	leftMarkOrigin = (10, 15)
 	rightMarkOrigin = (384-rightMarkSize[0]-10, 15)
 
-	dividerLineImg = Image.open("/home/pi/Printer/dividerline.bmp")
+	#dividerLineImg = Image.open("/home/pi/Printer/dividerline.bmp")
     
-	draw = ImageDraw.Draw(dividerLineImg)    
+	#draw = ImageDraw.Draw(dividerLineImg)    
 	draw.text(leftMarkOrigin, leftBorderText, font=font, fill=(0,0,0))
 	draw.text(rightMarkOrigin,rightMarkText, font=font, fill=(0,0,0))
 
@@ -221,18 +209,18 @@ def print_keypair(pubkey, privkey, leftBorderText):
     #do the actual printing
 
 	printer.printImage(finalImg, True)
-	
+	finalImg.save("test.bmp")
 	if(len(privkey) <= 51):
-		printer.printChar(privkey[:17]+"\n")
+		printer.println(privkey[:17])
 		printer.justify('R')
-		printer.printChar(privkey[17:34]+"\n")
+		printer.println(privkey[17:34])
 		printer.justify('L')
-		printer.printChar(privkey[34:]+"\n")
+		printer.println(privkey[34:])
 	else:
 		printer.println(privkey)
 
 	#print the divider line
-	printer.printImage(dividerLineImg)
+	#printer.printImage(dividerLineImg)
 	
 	#print some blank space so we can get a clean tear of the paper
 	printer.feed(3)
@@ -258,7 +246,7 @@ def genAndPrintKeys(remPubKey, remPrivKey, numCopies, password):
 
 	#open the printer itself
 	printer = Adafruit_Thermal("/dev/ttyAMA0", 19200, timeout=5)
-
+	printer.begin(200)
 
 
 	#this actually generates the keys.  see the file genkeys.py or genkeys_forget.py
@@ -290,22 +278,8 @@ def genAndPrintKeys(remPubKey, remPrivKey, numCopies, password):
 
 
 	if rememberKeys == True:
-		#store it to the sqlite db
-		con = None
-		try:
-			con = sqlite3.connect('/home/pi/Printer/keys.db3')
-		        con.execute("INSERT INTO keys (serialnum, public, private) VALUES (?,?,?)", (snum, sqlitePubKey, sqlitePrivKey))
-		except sqlite3.Error, e:
-			print "Error %s:" % e.args[0]
-			sys.exit(1)
-		finally:
-			if con:
-				con.commit()
-				con.close()
-			
-		
 		#store it in a flat file on the sd card
-		f = open("/boot/keys.txt", 'a+')
+		f = open("keys.txt", 'a+')
 		strToWrite = "Serial Number: " + snum + strToWrite
 		f.write(strToWrite);
 		f.write("\n---------------------------------\n")

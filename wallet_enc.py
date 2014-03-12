@@ -6,10 +6,8 @@ import base64
 import hashlib
 import aes
 import sqlite3
-import serializeBTC as ser
 import Crypto.Cipher.AES as AES
 import Crypto.Hash.SHA256 as SHA256
-import scrypt
 from itertools import izip
 from array import array
 from bitcoin.bip38 import Bip38
