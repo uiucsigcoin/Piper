@@ -1,0 +1,7 @@
+*.pyc
+keys.txt
+serialnumber.txt
+bitcoin/
+vanitygen
+Image
+ImageDraw
