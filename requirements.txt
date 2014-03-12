@@ -1,0 +1,16 @@
+Electrum==1.8
+PIL==1.1.7
+RPi.GPIO==0.5.4
+argparse==1.2.1
+## FIXME: could not find svn URL in dependency_links for this package:
+distribute==0.6.24dev-r0
+numpy==1.6.2
+pifacecommon==4.0.0
+pifacedigitalio==3.0.4
+pycrypto==2.6.1
+pygame==1.9.1release
+pyserial==2.5
+qrcode==4.0.4
+scrypt==0.6.1
+six==1.5.2
+slowaes==0.1a1
