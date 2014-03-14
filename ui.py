@@ -7,6 +7,8 @@ from time import sleep
 from threading import Thread
 import gobject
 
+from serialtest import main_loop
+
 global_ui = None
 
 class CoinUI:
@@ -26,6 +28,13 @@ class CoinUI:
         self.main_text = gtk.Label()
         self.display_message("Welcome to Coinverter!\n\nEnter a coin to get started.")
         self.window.add(self.main_text)
+        fontdesc = pango.FontDescription("DejaVu Sans 30")
+        attr = pango.AttrList()
+        fg_color = pango.AttrForeground(65535, 65535, 65535, 0, 140)
+        attr.insert(fg_color)
+        self.main_text.set_attributes(attr)
+        self.main_text.modify_font(fontdesc)
+
         self.main_text.show()
 
         color = gtk.gdk.color_parse('#000000')
@@ -33,14 +42,8 @@ class CoinUI:
         self.window.show()
 
     def display_message(self, message):
-        fontdesc = pango.FontDescription("DejaVu Sans 30")
-        attr = pango.AttrList()
-        fg_color = pango.AttrForeground(65535, 65535, 65535, 0, len(message))
-        attr.insert(fg_color)
-        self.main_text.set_attributes(attr)
-        self.main_text.modify_font(fontdesc)
         self.main_text.set_text(message)
-        
+
     def main(self):
         gtk.main()
 
@@ -49,28 +52,12 @@ class CoinUI:
             gtk.main_iteration_do(True)
         return True
 
-    def someFunc(self):
-
-        # Wait for window
-        counter = 0
-        for i in range(1,10):
-            counter += 1
-            message = "counter: " + str(counter)
-
-            print counter
-
-            # Redraw
-            self.main_text.set_text(message)
-            self.main_text.queue_draw()
-                
-            sleep(0.5)
-
 if __name__ == '__main__':
 
     gobject.threads_init()
     ui = CoinUI()
 
-    thread = Thread(target = ui.someFunc, args = ())
+    thread = Thread(target = main_loop, args = (ui,))
     thread.start()
     sleep(0.2)
 
