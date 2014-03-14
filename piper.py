@@ -23,17 +23,15 @@ import sys
 import genkeys
 from Adafruit_Thermal import *
 
-printer = None
 def get_printer(heat=200):
-	global printer
-	if printer:
-		return printer
-	else:
-		# open the printer itself
-		printer = Adafruit_Thermal("/dev/ttyAMA0", 19200, timeout=5)
-		printer.begin(200)
+	# open the printer itself
+	printer = Adafruit_Thermal("/dev/ttyAMA0", 19200, timeout=5)
+	printer.begin(200)
+	return printer
 
 def print_keypair(pubkey, privkey, leftBorderText):
+	printer = get_printer()
+
 	# check the cointype to decide which background to use
 	finalImgName = "btc"
 	coinName = "btc"
@@ -176,7 +174,6 @@ def print_keypair(pubkey, privkey, leftBorderText):
 	draw.text(rightMarkOrigin,rightMarkText, font=font, fill=(0,0,0))
 
 	# do the actual printing
-
 	printer.printImage(finalImg, True)
 	if(len(privkey) <= 51):
 		printer.println(privkey[:17])
@@ -193,13 +190,13 @@ def print_keypair(pubkey, privkey, leftBorderText):
 
 def genKeys():
         snum = get_serial_number()
-	pubkey, privkey = genKeys.make_keypair()
+	pubkey, privkey = genkeys.make_keypair()
 	return pubkey, privkey, snum
 
 
 
 
-def get_serial_numver():
+def get_serial_number():
         # open serial number file which tracks the serial number
 	snumfile = open('serialnumber.txt', 'r+')
 	snum = snumfile.read()

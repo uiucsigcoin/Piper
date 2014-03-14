@@ -1,2 +1,4 @@
+#! /usr/bin/env bash
+
 export DISPLAY=":0.0"
-python ui.py
+python /home/pi/Printer/ui.py

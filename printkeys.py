@@ -58,5 +58,9 @@ if numCopies <= 0:
 	print "The number of copies must be >= 0"
 	sys.exit(0);
 
+# get a keypair
+pubkey, privkey, snum = Piper.genKeys()
+leftMarkText = "Serial Number: {0}".format(snum)
+# do the actual printing
+Piper.print_keypair(pubkey, privkey, leftMarkText)
 
-Piper.genAndPrintKeys()

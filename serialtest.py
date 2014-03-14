@@ -10,6 +10,10 @@ import requests
 import time
 import json
 import piper
+from settings import *
+from coinbase import *
+
+coinbase = CoinbaseAPI(key=COINBASE_KEY, secret=COINBASE_SECRET)
 
 port = serial.Serial("/dev/ttyUSB0", baudrate=9600, timeout=0)
 GPIO.setmode(GPIO.BCM)
@@ -22,12 +26,31 @@ totalnickels = 0
 totaldimes = 0
 totalquarters = 0
 
+def send_coins(pubkey, amount):
+	rates = coinbase.exchange_rates()
+	btc_to_usd = float(rates["btc_to_usd"])
+	usd_to_btc = float(rates["usd_to_btc"])
+	if amount < COINBASE_MIN_TX_FEE * btc_to_usd:
+		return None
+	elif amount < COINBASE_NO_FEE_AMOUNT * btc_to_usd:
+		fee = COINBASE_MIN_TX_FEE
+	else:
+		fee = 0
+	print "fee: {0}".format(fee)
+	response = coinbase.send_coins(pubkey, amount,
+                                      currency="USD",
+                                      message="Testing for EOH",
+                                      tx_fee=fee)
+	return response
+
+
 def waitForButton():
 	pennies = 0
 	nickels = 0
 	dimes = 0
 	quarters = 0
-	transactiontotal = Decimal('0.00').quantize(Decimal('.01'))
+	getcontext().prec = 2
+	transactiontotal = Decimal('0.00')
 	while (GPIO.input(17)):
 		coinval = port.read(1)
 		if (len(coinval) is 0):
@@ -66,10 +89,33 @@ while True:
 
 	# get a keypair
         pubkey, privkey, snum = piper.genKeys()
+	text = "Public Key: {0}\nPrivate Key: {1}\nSerial Number: {2}\n".format(pubkey, privkey, snum) + "-"*20 + "\n"
+	print text
+	with open('keys.txt', 'a+') as key_file:
+		key_file.write(text)
         leftMarkText = "Serial Number: {0}".format(snum)
-        # do the actual printing
-        piper.print_keypair(pubkey, privkey, leftMarkText)
+	response = send_coins(pubkey, transaction[0])
+	if response == None:
+		print "Not enough money! Send refund of {0}".format(transaction[0])
+		continue
+	elif response['success']:
+		# do the actual printing
+		coinbase_tx = response['transaction']
+		print "Successful transaction: {0}".format(coinbase_tx['id'])
+		print "Printing receipt"
+		piper.print_keypair(pubkey, privkey, leftMarkText)
+	else:
+		print "Something is very wrong!"
+		print response
 
-	transaction = coinbase.send(to_address=pubkey,
-		      amount=transaction[0],
-		      notes='Coinverter Transaction {0}'.format(num))
+
+
+
+
+
+
+
+
+
+
+
