@@ -3,11 +3,10 @@ pygtk.require('2.0')
 import gtk
 import pango
 from time import sleep
-
+import sys
 from threading import Thread
 import gobject
-
-from serialtest import main_loop
+from serialtest import main_loop, stop_thread
 
 global_ui = None
 
@@ -25,9 +24,12 @@ class CoinUI:
         self.window.set_border_width(0)
         self.window.fullscreen()
 
+        self.box = gtk.VBox()
+        self.box.show()
+        self.window.add(self.box)
         self.main_text = gtk.Label()
         self.display_message("Welcome to Coinverter!\n\nEnter a coin to get started.")
-        self.window.add(self.main_text)
+        self.box.add(self.main_text)
         fontdesc = pango.FontDescription("DejaVu Sans 30")
         attr = pango.AttrList()
         fg_color = pango.AttrForeground(65535, 65535, 65535, 0, 140)
@@ -37,12 +39,26 @@ class CoinUI:
 
         self.main_text.show()
 
+        self.exc_rate = gtk.Label()
+        self.box.add(self.exc_rate)
+        fontdesc = pango.FontDescription("DejaVu Sans 20")
+        attr = pango.AttrList()
+        fg_color = pango.AttrForeground(65535, 65535, 65535, 0, 140)
+        attr.insert(fg_color)
+        self.exc_rate.set_attributes(attr)
+        self.exc_rate.modify_font(fontdesc)
+
+        self.exc_rate.show()
+
         color = gtk.gdk.color_parse('#000000')
         self.window.modify_bg(gtk.STATE_NORMAL, color)
         self.window.show()
 
     def display_message(self, message):
         self.main_text.set_text(message)
+
+    def display_exchange_rate(self, price):
+        self.exc_rate.set_text("1 BTC = {0} USD".format(price))
 
     def main(self):
         gtk.main()
@@ -61,9 +77,11 @@ if __name__ == '__main__':
     thread.start()
     sleep(0.2)
 
+try:
     ui.main()
+except (KeyboardInterrupt, SystemExit):
+    stop_thread()
+    sys.exit()
 
-    # Show market price (pass thru func)
-    # Money put in (USD + BTC)
-    # Instructions for each step
+
         

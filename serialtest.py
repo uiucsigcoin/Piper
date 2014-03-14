@@ -9,9 +9,13 @@ import requests
 import time
 import json
 import piper
+import sys
+import locale
 
 from settings import *
 from coinbase import *
+
+locale.setlocale( locale.LC_ALL, '' )
 
 coinbase = CoinbaseAPI(key=COINBASE_KEY, secret=COINBASE_SECRET)
 
@@ -19,45 +23,54 @@ port = serial.Serial("/dev/ttyUSB0", baudrate=9600, timeout=0)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(17, GPIO.IN)
 
-getcontext().prec = 2
-runningtotal = 0.00
-totalpennies = 0
-totalnickels = 0
-totaldimes = 0
-totalquarters = 0
+STOP_THREAD = False
+def stop_thread():
+	global STOP_THREAD
+	STOP_THREAD = True
+
+def update_exchange_rates(ui):
+	rates = coinbase.exchange_rates()
+	global btc_to_usd
+	global usd_to_btc
+	btc_to_usd = float(rates["btc_to_usd"])
+	usd_to_btc = float(rates["usd_to_btc"])
+	ui.display_exchange_rate(locale.currency(btc_to_usd))
+
+btc_to_usd = None
+usd_to_btc = None
 
 totals = {'penny':0, 'dime':0,'quarter':0, 'nickel':0, 'all':0}
+with open('totals.json', 'r') as total_file:
+	total_dict = total_file.read()
+	if total_dict:
+		totals = json.loads(total_dict)
 
-rates = coinbase.exchange_rates()
-btc_to_usd = float(rates["btc_to_usd"])
-usd_to_btc = float(rates["usd_to_btc"])
-
-def send_coins(pubkey, amount):
+def send_coins(pubkey, amount, snum):
 	if amount < COINBASE_MIN_TX_FEE * btc_to_usd:
 		return None
 	elif amount < COINBASE_NO_FEE_AMOUNT * btc_to_usd:
 		fee = COINBASE_MIN_TX_FEE
 		amount -= fee * btc_to_usd
-		if float(amount) * usd_to_btc < 0.00005:
+		if float(amount) * usd_to_btc < COINBASE_MIN_AMOUNT:
 			return None
 	else:
 		fee = 0
-	print "amount: {0}, fee: {1}".format(amount, fee)
+	print "amount: {0}, fee: {1}BTC".format(locale.currency(amount), fee)
 	response = coinbase.send_coins(pubkey, amount,
                                       currency="USD",
-                                      message="Testing for EOH",
+                                      message="Serial Number: {0}".format(snum),
                                       tx_fee=fee)
 	return response
 
-def waitForButton(ui):
-	pennies = 0
-	nickels = 0
-	dimes = 0
-	quarters = 0
-	getcontext().prec = 2
-	transactiontotal = 0.0
-	ui.display_message("Please enter some coins\n(Minimum ~${0})!".format(btc_to_usd * (0.00005460 + COINBASE_MIN_TX_FEE)))
+def waitForButton(ui, transaction):
+	minimum = btc_to_usd * (0.00005460 + COINBASE_MIN_TX_FEE)
+	ui.display_message("Please enter some coins\n(Minimum is {0})!".format(locale.currency(minimum)))
+	print "All systems are go! Waiting for money"
 	while (GPIO.input(17)):
+		if (transaction['total'] > 0):
+			ui.display_message("{0} USD = {1} BTC".format(locale.currency(transaction['total']), transaction['total']*usd_to_btc))
+		if STOP_THREAD:
+			sys.exit(0)
 		coinval = port.read(1)
 		if (len(coinval) is 0):
                   continue
@@ -65,40 +78,39 @@ def waitForButton(ui):
                   coinval = ord(coinval)
 		if   coinval == 1:
 			print "You got a penny!"
-			pennies += 1
-			transactiontotal += .01
+			transaction['penny'] += 1
+			transaction['total'] += .01
 		elif coinval ==  5:
 			print "You got a nickel!"
-			nickels+= 1
-			transactiontotal += .05
+			transaction['nickel'] += 1
+			transaction['total'] += .05
 		elif coinval == 10:
 			print "You got a dime!"
-			dimes+= 1
-			transactiontotal += .10
+			transaction['dime'] += 1
+			transaction['total'] += .10
 		elif coinval == 25:
 			print "That was a quarter!"
-			quarters+= 25
-			transactiontotal += .25
-		ui.display_message("${0} USD = {1} BTC".format(transactiontotal, transactiontotal*usd_to_btc))
+			transaction['quarter'] += 1
+			transaction['total'] += .25
+
+		ui.display_message("{0} USD = {1} BTC".format(locale.currency(transaction['total']), transaction['total']*usd_to_btc))
 	print "Button was pushed."
-	return (transactiontotal, pennies, nickels, dimes, quarters)
+	return transaction
 
 def main_loop(ui):
-	global runningtotal
+	transaction = {'penny':0, 'dime':0,'quarter':0, 'nickel':0, 'total':0}
 	while True:
-		print "About to wait for money!"
-		transaction = waitForButton(ui);
-		totals['all'] += transaction[0]
-		totals['penny'] += transaction[1]
-		totals['nickel'] += transaction[2]
-		totals['dime'] += transaction[3]
-		totals['quarter'] += transaction[4]
-		runningtotal += transaction[0]
+		update_exchange_rates(ui)
+		transaction = waitForButton(ui, transaction);
+		totals['all'] += transaction['total']
+		totals['penny'] += transaction['penny']
+		totals['nickel'] += transaction['nickel']
+		totals['dime'] += transaction['dime']
+		totals['quarter'] += transaction['quarter']
+		print "Total amount inserted: {0}USD".format(locale.currency(transaction['total']))
+
 		with open('totals.json', 'w') as total_file:
-			for key, value in totals.iteritems():
-				print >> total_file, key + " " + str(value)
-			print >> total_file, runningtotal
-		print "Total amount inserted: {0}USD".format(transaction[0])
+			total_file.write(json.dumps(totals))
 		# get a keypair
 		pubkey, privkey, snum = piper.genKeys()
 		text = "Public Key: {0}\nPrivate Key: {1}\nSerial Number: {2}\n".format(pubkey, privkey, snum) + "-"*20 + "\n"
@@ -109,11 +121,14 @@ def main_loop(ui):
 		ui.display_message("Sending transaction!")
 		if (DEBUGGING):
 			print "JK we're not actually sending it"
-			return
-		response = send_coins(pubkey, transaction[0])
+			transaction = {'penny':0, 'dime':0,'quarter':0, 'nickel':0, 'total':0}
+			continue
+		response = send_coins(pubkey, transaction['total'], snum)
 		if response == None:
-			print "Not enough money! Send refund of {0}".format(transaction[0])
-			ui.display_message("Not enough money!\nMinimum is {0}USD".format(COINBASE_MIN_TX_FEE * btc_to_usd))
+			print "Not enough money! Send refund of {0:}".format(locale.currency(transaction['total']))
+			minimum = btc_to_usd * (0.00005460 + COINBASE_MIN_TX_FEE)
+			ui.display_message("Not enough money!\nMinimum is {0}USD\nPlease try again!".format(locale.currency(minimum)))
+			time.sleep(2)
 			continue
 		elif response['success']:
 			# do the actual printing
@@ -122,11 +137,11 @@ def main_loop(ui):
 			print "Successful transaction: {0}".format(coinbase_tx['id'])
 			print "Printing receipt"
 			piper.print_keypair(pubkey, privkey, leftMarkText)
+			print "resetting values"
+			transaction = {'penny':0, 'dime':0,'quarter':0, 'nickel':0, 'total':0}
+			
 		else:
 			print "Something is very wrong!"
-			print "You should probably refund", transaction[0]
+			print "You should probably refund", transaction['total']
 			ui.display_message("Transaction Failure. :-(")
 			print response
-
-
-
