@@ -20,38 +20,27 @@ import ImageDraw
 import ImageFont
 import qrcode
 import sys
-import sqlite3
 from Adafruit_Thermal import *
 
-
-def print_seed(seed):
-
-	printer = Adafruit_Thermal("/dev/ttyAMA0", 19200, timeout=5)
-	printer.begin(200)
-
-	printer.println(seed)
-	
-	printer.feed(3)
-
-
-	printer.sleep()      # Tell printer to sleep
-	printer.wake()       # Call wake() before printing again, even if reset
-	printer.setDefault() # Restore printer to defaults
-
-
+printer = None
+def get_printer(heat=200):
+	global printer
+	if printer:
+		return printer
+	else:
+		# open the printer itself
+		printer = Adafruit_Thermal("/dev/ttyAMA0", 19200, timeout=5)
+		printer.begin(200)
+		
 
 def print_keypair(pubkey, privkey, leftBorderText):
-
-#open the printer itself
-	printer = Adafruit_Thermal("/dev/ttyAMA0", 19200, timeout=5)
-	printer.begin(200)
-#check the cointype to decide which background to use
+	# check the cointype to decide which background to use
 	finalImgName = "btc"
 	coinName = "btc"
 	printCoinName = (finalImgName == "blank")
 
 	finalImgName += "-wallet"
-#load a blank image of the paper wallet with no QR codes or keys on it which we will draw on
+	# load a blank image of the paper wallet with no QR codes or keys on it which we will draw on
 	if(len(privkey) > 51):
 		finalImgName += "-enc"
 	else:
@@ -63,10 +52,10 @@ def print_keypair(pubkey, privkey, leftBorderText):
 
 
 
-#---begin the public key qr code generation and drawing section---
+	# ---begin the public key qr code generation and drawing section---
 
-#we begin the QR code creation process
-#feel free to change the error correct level as you see fit
+	# we begin the QR code creation process
+	# feel free to change the error correct level as you see fit
 	qr = qrcode.QRCode(
 	    version=None,
 	    error_correction=qrcode.constants.ERROR_CORRECT_M,
@@ -79,7 +68,7 @@ def print_keypair(pubkey, privkey, leftBorderText):
 
 	pubkeyImg = qr.make_image()
 
-#resize the qr code to match our design
+	# resize the qr code to match our design
 	pubkeyImg = pubkeyImg.resize((175,175), Image.NEAREST)
 
 
@@ -88,8 +77,6 @@ def print_keypair(pubkey, privkey, leftBorderText):
 
 	if(printCoinName):
 		draw.text((45, 400), coinName, font=font, fill=(0,0,0))
-
-
 	font = ImageFont.truetype("/usr/share/fonts/truetype/droid/DroidSansMono.ttf", 20)
 	startPos=(110,38)
 	charDist=15
@@ -102,10 +89,7 @@ def print_keypair(pubkey, privkey, leftBorderText):
 		pubkey += " "
 		keyLength = len(pubkey)
 
-
-
-
-#draw 2 lines of 17 characters each.  keyLength always == 34 so keylength/17 == 2
+	# draw 2 lines of 17 characters each.  keyLength always == 34 so keylength/17 == 2
 	for x in range(0,keyLength/17):
 		lastCharPos=0
 		#print a line
@@ -113,7 +97,7 @@ def print_keypair(pubkey, privkey, leftBorderText):
 			theChar = pubkey[(x*17)+y]
 			charSize = draw.textsize(theChar, font=font)
 			
-			#if y is 0 then this is the first run of this loop, and we should use startPos[0] for the x coordinate instead of the lastCharPos
+			# if y is 0 then this is the first run of this loop, and we should use startPos[0] for the x coordinate instead of the lastCharPos
 			if y == 0:
 				draw.text((startPos[0],startPos[1]+(lineHeight*x)),theChar, font=font, fill=(0,0,0))
 				lastCharPos = startPos[0]+charSize[0]+(charDist-charSize[0])
@@ -123,19 +107,15 @@ def print_keypair(pubkey, privkey, leftBorderText):
 
 
 
-#draw the QR code on the final image
+	# draw the QR code on the final image
 	finalImg.paste(pubkeyImg, (150, 106))
 
-#---end the public key qr code generation and drawing section---
+	# ---end the public key qr code generation and drawing section---
 
+	# ---begin the private key qr code generation and drawing section---
 
-
-
-
-#---begin the private key qr code generation and drawing section---
-
-#we begin the QR code creation process
-#feel free to change the error correct level as you see fit
+	# we begin the QR code creation process
+	# feel free to change the error correct level as you see fit
 	qr = qrcode.QRCode(
 	    version=None,
 	    error_correction=qrcode.constants.ERROR_CORRECT_M,
@@ -147,10 +127,10 @@ def print_keypair(pubkey, privkey, leftBorderText):
 
 	privkeyImg = qr.make_image()
 
-#resize the qr code to match our design
+	# resize the qr code to match our design
 	privkeyImg = privkeyImg.resize((220,220), Image.NEAREST)
 
-	#draw the QR code on the final image
+	# draw the QR code on the final image
 	finalImg.paste(privkeyImg, (125, 560))
 
 
@@ -166,14 +146,13 @@ def print_keypair(pubkey, privkey, leftBorderText):
 		keyLength = len(privkey)
 
 
-#draw 2 lines of 17 characters each.  keyLength always == 34 so keylength/17 == 2
+	# draw 2 lines of 17 characters each.  keyLength always == 34 so keylength/17 == 2
 	for x in range(0,keyLength/17):
 		lastCharPos=0
-		#print a line
+		# print a line
 		for y in range(0, 17):
 			theChar = privkey[(x*17)+y]
 			charSize = draw.textsize(theChar, font=font)
-			#print charSize
 			if y == 0:
 				draw.text((startPos[0],startPos[1]+(lineHeight*x)),theChar, font=font, fill=(0,0,0))
 				lastCharPos = startPos[0]+charSize[0]+(charDist-charSize[0])
@@ -181,12 +160,12 @@ def print_keypair(pubkey, privkey, leftBorderText):
 				draw.text((lastCharPos,startPos[1]+(lineHeight*x)),theChar, font=font, fill=(0,0,0))
 				lastCharPos = lastCharPos + charSize[0] + (charDist-charSize[0])
 
-#---end the private key qr code generation and drawing section---
+	# ---end the private key qr code generation and drawing section---
 
 
 
-#create the divider
-	rightMarkText = "Piperwallet.com"
+	# create the divider
+	rightMarkText = "ACM@UIUC SIGCoin"
 
 
 	font = ImageFont.truetype("/usr/share/fonts/ttf/swansea.ttf", 20)
@@ -196,109 +175,44 @@ def print_keypair(pubkey, privkey, leftBorderText):
 	leftMarkOrigin = (10, 15)
 	rightMarkOrigin = (384-rightMarkSize[0]-10, 15)
 
-	#dividerLineImg = Image.open("/home/pi/Printer/dividerline.bmp")
-    
-	#draw = ImageDraw.Draw(dividerLineImg)    
 	draw.text(leftMarkOrigin, leftBorderText, font=font, fill=(0,0,0))
 	draw.text(rightMarkOrigin,rightMarkText, font=font, fill=(0,0,0))
 
-
-
-
-
-    #do the actual printing
+	# do the actual printing
 
 	printer.printImage(finalImg, True)
-	finalImg.save("test.bmp")
 	if(len(privkey) <= 51):
 		printer.println(privkey[:17])
-		printer.justify('R')
 		printer.println(privkey[17:34])
-		printer.justify('L')
 		printer.println(privkey[34:])
 	else:
 		printer.println(privkey)
 
-	#print the divider line
-	#printer.printImage(dividerLineImg)
-	
-	#print some blank space so we can get a clean tear of the paper
+	# print some blank space so we can get a clean tear of the paper
 	printer.feed(3)
-
-
-
-
-
 	printer.sleep()      # Tell printer to sleep
 	printer.wake()       # Call wake() before printing again, even if reset
 	printer.setDefault() # Restore printer to defaults
-	
-	
-	
 
-
-def genAndPrintKeys(remPubKey, remPrivKey, numCopies, password):
-
-
-	#open serial number file which tracks the serial number
+def genAndPrintKeys():
+	# open serial number file which tracks the serial number
 	snumfile = open('serialnumber.txt', 'r+')
 	snum = snumfile.read()
 
-	#open the printer itself
-	printer = Adafruit_Thermal("/dev/ttyAMA0", 19200, timeout=5)
-	printer.begin(200)
-
-
-	#this actually generates the keys.  see the file genkeys.py or genkeys_forget.py
+	# this actually generates the keys.  see the file genkeys.py or genkeys_forget.py
 	import genkeys as btckeys
-
 	btckeys.genKeys()
-		
-	import wallet_enc as WalletEnc
-	#encrypt the keys if needed
-	if(password != ""):
-		privkey = WalletEnc.pw_encode(btckeys.pubkey, btckeys.privkey, password)
-	else:
-		privkey = btckeys.privkey
+	privkey = btckeys.privkey
 	
-	
-	rememberKeys = False
-	sqlitePubKey = ""
-	sqlitePrivKey = ""
 	strToWrite = ""
-	if remPubKey:
-		strToWrite = "\nPublic Key: "+btckeys.pubkey
-		sqlitePubKey = btckeys.pubkey
-		rememberKeys = True
-
-	if remPrivKey:
-		strToWrite = strToWrite + "\nPrivate Key: "+privkey
-		sqlitePrivKey = privkey
-		rememberKeys = True
-
-
-	if rememberKeys == True:
-		#store it in a flat file on the sd card
-		f = open("keys.txt", 'a+')
-		strToWrite = "Serial Number: " + snum + strToWrite
-		f.write(strToWrite);
-		f.write("\n---------------------------------\n")
-		f.close()
-
 
 	leftMarkText = "Serial Number: "+snum
 
-	#do the actual printing
-	for x in range(0, numCopies):
+	# do the actual printing
+	print_keypair(btckeys.pubkey, privkey, leftMarkText)
 
-		#piper.print_keypair(pubkey, privkey, leftBorderText)
-		print_keypair(btckeys.pubkey, privkey, leftMarkText)
-		
-
-
-
-
-	#update serial number
+	# update serial number
 	snumfile.seek(0,0)
 	snumfile.write(str(int(snum)+1))
 	snumfile.close()
+	return btckeys.pubkey, privkey, snum

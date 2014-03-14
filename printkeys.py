@@ -59,4 +59,4 @@ if numCopies <= 0:
 	sys.exit(0);
 
 
-Piper.genAndPrintKeys(rememberKeys, rememberKeys, numCopies, "")
+Piper.genAndPrintKeys()
