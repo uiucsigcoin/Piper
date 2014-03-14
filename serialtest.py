@@ -20,7 +20,7 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(17, GPIO.IN)
 
 getcontext().prec = 2
-runningtotal = Decimal('0.00')
+runningtotal = 0.00
 totalpennies = 0
 totalnickels = 0
 totaldimes = 0
@@ -37,7 +37,7 @@ def send_coins(pubkey, amount):
 		return None
 	elif amount < COINBASE_NO_FEE_AMOUNT * btc_to_usd:
 		fee = COINBASE_MIN_TX_FEE
-		amount -= Decimal(fee * btc_to_usd)
+		amount -= fee * btc_to_usd
 		if float(amount) * usd_to_btc < 0.00005:
 			return None
 	else:
@@ -55,7 +55,7 @@ def waitForButton(ui):
 	dimes = 0
 	quarters = 0
 	getcontext().prec = 2
-	transactiontotal = Decimal('0.00')
+	transactiontotal = 0.0
 	ui.display_message("Please enter some coins\n(Minimum ~${0})!".format(btc_to_usd * (0.00005460 + COINBASE_MIN_TX_FEE)))
 	while (GPIO.input(17)):
 		coinval = port.read(1)
@@ -66,35 +66,38 @@ def waitForButton(ui):
 		if   coinval == 1:
 			print "You got a penny!"
 			pennies += 1
-			transactiontotal += Decimal(.01)
+			transactiontotal += .01
 		elif coinval ==  5:
 			print "You got a nickel!"
 			nickels+= 1
-			transactiontotal += Decimal(.05)
+			transactiontotal += .05
 		elif coinval == 10:
 			print "You got a dime!"
 			dimes+= 1
-			transactiontotal += Decimal(.10)
+			transactiontotal += .10
 		elif coinval == 25:
 			print "That was a quarter!"
 			quarters+= 25
-			transactiontotal += Decimal(.25)
-		ui.display_message("${0} USD = {1} BTC".format(transactiontotal, float(transactiontotal)*usd_to_btc))
+			transactiontotal += .25
+		ui.display_message("${0} USD = {1} BTC".format(transactiontotal, transactiontotal*usd_to_btc))
 	print "Button was pushed."
 	return (transactiontotal, pennies, nickels, dimes, quarters)
 
 def main_loop(ui):
+	global runningtotal
 	while True:
-		print "Put some money in!"
+		print "About to wait for money!"
 		transaction = waitForButton(ui);
 		totals['all'] += transaction[0]
 		totals['penny'] += transaction[1]
 		totals['nickel'] += transaction[2]
 		totals['dime'] += transaction[3]
 		totals['quarter'] += transaction[4]
-		#with open('totals.json', 'w') as total_file:
-		#	total_file.write(json.dumps(totals))
-
+		runningtotal += transaction[0]
+		with open('totals.json', 'w') as total_file:
+			for key, value in totals.iteritems():
+				print >> total_file, key + " " + str(value)
+			print >> total_file, runningtotal
 		print "Total amount inserted: {0}USD".format(transaction[0])
 		# get a keypair
 		pubkey, privkey, snum = piper.genKeys()
@@ -104,6 +107,9 @@ def main_loop(ui):
 			key_file.write(text)
 		leftMarkText = "Serial Number: {0}".format(snum)
 		ui.display_message("Sending transaction!")
+		if (DEBUGGING):
+			print "JK we're not actually sending it"
+			return
 		response = send_coins(pubkey, transaction[0])
 		if response == None:
 			print "Not enough money! Send refund of {0}".format(transaction[0])
@@ -118,6 +124,7 @@ def main_loop(ui):
 			piper.print_keypair(pubkey, privkey, leftMarkText)
 		else:
 			print "Something is very wrong!"
+			print "You should probably refund", transaction[0]
 			ui.display_message("Transaction Failure. :-(")
 			print response
 
