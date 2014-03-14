@@ -20,6 +20,7 @@ import ImageDraw
 import ImageFont
 import qrcode
 import sys
+import genkeys
 from Adafruit_Thermal import *
 
 printer = None
@@ -31,7 +32,6 @@ def get_printer(heat=200):
 		# open the printer itself
 		printer = Adafruit_Thermal("/dev/ttyAMA0", 19200, timeout=5)
 		printer.begin(200)
-		
 
 def print_keypair(pubkey, privkey, leftBorderText):
 	# check the cointype to decide which background to use
@@ -46,7 +46,6 @@ def print_keypair(pubkey, privkey, leftBorderText):
 	else:
 		finalImgName += "-blank"
 	finalImgName += ".bmp"
-	
 	finalImgFolder = "/home/pi/Printer/Images/"
 	finalImg = Image.open(finalImgFolder+finalImgName)
 
@@ -96,7 +95,7 @@ def print_keypair(pubkey, privkey, leftBorderText):
 		for y in range(0, 17):
 			theChar = pubkey[(x*17)+y]
 			charSize = draw.textsize(theChar, font=font)
-			
+
 			# if y is 0 then this is the first run of this loop, and we should use startPos[0] for the x coordinate instead of the lastCharPos
 			if y == 0:
 				draw.text((startPos[0],startPos[1]+(lineHeight*x)),theChar, font=font, fill=(0,0,0))
@@ -162,8 +161,6 @@ def print_keypair(pubkey, privkey, leftBorderText):
 
 	# ---end the private key qr code generation and drawing section---
 
-
-
 	# create the divider
 	rightMarkText = "ACM@UIUC SIGCoin"
 
@@ -194,25 +191,19 @@ def print_keypair(pubkey, privkey, leftBorderText):
 	printer.wake()       # Call wake() before printing again, even if reset
 	printer.setDefault() # Restore printer to defaults
 
-def genAndPrintKeys():
-	# open serial number file which tracks the serial number
+def genKeys():
+        snum = get_serial_number()
+	pubkey, privkey = genKeys.make_keypair()
+	return pubkey, privkey, snum
+
+
+
+
+def get_serial_numver():
+        # open serial number file which tracks the serial number
 	snumfile = open('serialnumber.txt', 'r+')
 	snum = snumfile.read()
-
-	# this actually generates the keys.  see the file genkeys.py or genkeys_forget.py
-	import genkeys as btckeys
-	btckeys.genKeys()
-	privkey = btckeys.privkey
-	
-	strToWrite = ""
-
-	leftMarkText = "Serial Number: "+snum
-
-	# do the actual printing
-	print_keypair(btckeys.pubkey, privkey, leftMarkText)
-
-	# update serial number
 	snumfile.seek(0,0)
 	snumfile.write(str(int(snum)+1))
 	snumfile.close()
-	return btckeys.pubkey, privkey, snum
+        return int(snum)

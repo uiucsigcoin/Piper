@@ -17,23 +17,13 @@
 
 import os, sys
 from subprocess import Popen, PIPE
-import sqlite3
 
-pubkey = ""
-privkey = ""
-keysAreValid = False
 
-def genKeys():
-	global pubkey, privkey, keysAreValid
 
-	keysAreValid = False
-	versionNum = "1"
-	addrPrefix = "1"
+def make_keypair(addrPrefix="1"):
 	process = Popen(["./vanitygen", "-q", "-t","1","-s", "/dev/random", addrPrefix], stdout=PIPE)
-
 	results = process.stdout.read()
 	addrs = results.split()
 	pubkey = addrs[3]
 	privkey = addrs[5]
-	
-
+        return pubkey, privkey

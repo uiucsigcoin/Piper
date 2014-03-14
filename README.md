@@ -1,18 +1,18 @@
-Piper: A bitcoin hardware paper wallet printer and so much more.  Check out piperwallet.com for more info!
+CoinMachine
+===========
 
-    This file is part of Piper.
+A USD Coin to BTC converter.
 
-    Piper is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Hardware Components
+===================
 
-    Piper is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+* Coin Acceptor: http://www.adafruit.com/products/787
+* Thermal Printer: http://www.adafruit.com/products/597
 
-    You should have received a copy of the GNU General Public License
-    along with Piper.  If not, see <http://www.gnu.org/licenses/>.
+Code Components:
+================
 
-    Piper Copyright (C) 2013  Christopher Cassano
+* GUI: Used to display current price and confirm transaction with user.
+* Coin Acceptor: Serial connection to coin accepter to recognize pennies, nickels, and quarters.
+* Receipt Rendering: Print out a QR code, public key, private key, and the balance.
+* BTC Transfer code: Send money to wallet from local wallet or Coinbase API.
