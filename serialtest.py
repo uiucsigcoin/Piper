@@ -88,7 +88,7 @@ def waitForButton(ui, transaction):
 	if (transaction['total'] > 0):
 		ui.display_message("{0} USD = {1} BTC".format(locale.currency(transaction['total']), transaction['total']*usd_to_btc))
 	else:
-		ui.display_message("Please enter some coins\nMinimum is {0}!".format(locale.currency(minimum)))
+		ui.display_message("Welcome to Coinverter!\nPlease enter some coins\nMinimum is {0}!".format(locale.currency(minimum + .01)))
 	logger.info("All systems are go! Waiting for money")
 	while (GPIO.input(17)):
 		if STOP_THREAD:
@@ -161,13 +161,12 @@ def main_loop(ui):
 		elif response['success']:
 			# do the actual printing
 			coinbase_tx = response['transaction']
-			ui.display_message("Transaction Successful!\nPrinting Receipt.")
+			ui.display_message("Transaction successful!\nPrinting wallet\nPlease wait...")
 			logger.info("Successful transaction: {0}".format(coinbase_tx['id']))
-			logger.info("Printing receipt")
+			logger.info("Printing wallet, please wait")
 			piper.print_keypair(pubkey, privkey, leftMarkText)
 			logger.info("resetting values")
 			transaction = {'penny':0, 'dime':0,'quarter':0, 'nickel':0, 'total':0}
-			
 		else:
 			logger.error("Something is very wrong!")
 			logger.info("You should probably refund", transaction['total'])

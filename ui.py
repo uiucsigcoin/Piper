@@ -33,7 +33,7 @@ class CoinUI:
         self.box.show()
         self.window.add(self.box)
         self.main_text = gtk.Label()
-        self.display_message("Welcome to Coinverter!\n\nEnter a coin to get started.")
+        self.display_message("Welcome to Coinverter!\n\nLoading...")
         self.box.add(self.main_text)
         fontdesc = pango.FontDescription("DejaVu Sans 30")
         attr = pango.AttrList()
@@ -64,7 +64,7 @@ class CoinUI:
         self.main_text.set_text(message)
 
     def display_exchange_rate(self, price, dollahs, btcs):
-        self.exc_rate.set_text("1 BTC = {0}\nTotal processed today = {1} / {2} BTC".format(price, dollahs, btcs))
+        self.exc_rate.set_text("1 BTC = {0}\nTotal processed today = {1} / {2:.6} BTC".format(price, dollahs, btcs))
 
     def main(self):
         gtk.main()
