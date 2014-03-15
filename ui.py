@@ -7,6 +7,8 @@ import sys
 from threading import Thread
 import gobject
 from serialtest import main_loop, stop_thread
+import logging
+import locale
 
 global_ui = None
 
@@ -18,6 +20,9 @@ class CoinUI:
         widget.window.set_cursor(cursor)
 
     def __init__(self):
+	self.logger = logging.getLogger('coinverter.ui')
+	self.logger.info('setting up ui')
+
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.connect("delete_event", gtk.main_quit)
         self.window.connect("realize", self.realize_cb)
@@ -55,10 +60,11 @@ class CoinUI:
         self.window.show()
 
     def display_message(self, message):
+	self.logger.debug(message)
         self.main_text.set_text(message)
 
-    def display_exchange_rate(self, price):
-        self.exc_rate.set_text("1 BTC = {0} USD".format(price))
+    def display_exchange_rate(self, price, dollahs, btcs):
+        self.exc_rate.set_text("1 BTC = {0}\nTotal processed today = {1} / {2} BTC".format(price, dollahs, btcs))
 
     def main(self):
         gtk.main()
@@ -83,5 +89,3 @@ except (KeyboardInterrupt, SystemExit):
     stop_thread()
     sys.exit()
 
-
-        
