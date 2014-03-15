@@ -26,7 +26,7 @@ from Adafruit_Thermal import *
 def get_printer(heat=200):
 	# open the printer itself
 	printer = Adafruit_Thermal("/dev/ttyAMA0", 19200, timeout=5)
-	printer.begin(200)
+	printer.begin(heat)
 	return printer
 
 def print_keypair(pubkey, privkey, leftBorderText):
@@ -55,7 +55,7 @@ def print_keypair(pubkey, privkey, leftBorderText):
 	# feel free to change the error correct level as you see fit
 	qr = qrcode.QRCode(
 	    version=None,
-	    error_correction=qrcode.constants.ERROR_CORRECT_M,
+	    error_correction=qrcode.constants.ERROR_CORRECT_Q,
 	    box_size=10,
 	    border=0,
 	)
@@ -66,8 +66,7 @@ def print_keypair(pubkey, privkey, leftBorderText):
 	pubkeyImg = qr.make_image()
 
 	# resize the qr code to match our design
-	pubkeyImg = pubkeyImg.resize((175,175), Image.NEAREST)
-
+	pubkeyImg = pubkeyImg.resize((220,220), Image.NEAREST)
 
 	font = ImageFont.truetype("/usr/share/fonts/ttf/swansea.ttf", 60)
 	draw = ImageDraw.Draw(finalImg)
@@ -115,7 +114,7 @@ def print_keypair(pubkey, privkey, leftBorderText):
 	# feel free to change the error correct level as you see fit
 	qr = qrcode.QRCode(
 	    version=None,
-	    error_correction=qrcode.constants.ERROR_CORRECT_M,
+	    error_correction=qrcode.constants.ERROR_CORRECT_Q,
 	    box_size=10,
 	    border=0,
 	)
@@ -162,7 +161,6 @@ def print_keypair(pubkey, privkey, leftBorderText):
 	# create the divider
 	rightMarkText = "ACM@UIUC SIGCoin"
 
-
 	font = ImageFont.truetype("/usr/share/fonts/ttf/swansea.ttf", 20)
 
 	rightMarkSize = draw.textsize(rightMarkText, font=font)
@@ -174,14 +172,36 @@ def print_keypair(pubkey, privkey, leftBorderText):
 	draw.text(rightMarkOrigin,rightMarkText, font=font, fill=(0,0,0))
 
 	# do the actual printing
-	printer.printImage(finalImg, True)
-	if(len(privkey) <= 51):
-		printer.println(privkey[:17])
-		printer.println(privkey[17:34])
-		printer.println(privkey[34:])
-	else:
-		printer.println(privkey)
-
+	printer.inverseOn()
+	printer.setSize("L")
+	printer.println("Coinverter")
+	printer.setSize("S")
+	printer.inverseOff()
+	printer.println(rightMarkText)
+	printer.println(leftBorderText)
+	printer.setSize("L")
+	printer.println("Public Key")
+	printer.setSize("S")
+	printer.println(pubkey[:17])
+	printer.println(pubkey[17:])
+	printer.feed(1)
+	printer.printImage(pubkeyImg, True)
+	printer.feed(1)
+	printer.println("Import your wallet with")
+	printer.println("blockchain.info on the web")
+	printer.println("or on your Android phone!")
+	printer.feed(1)
+	printer.setSize("L")
+	printer.println("Private Key")
+	printer.setSize("S")
+	printer.printImage(privkeyImg, True)
+	#printer.printImage(finalImg, True)
+	printer.println(privkey[:17])
+	printer.println(privkey[17:34])
+	printer.println(privkey[34:])
+	printer.feed(1)
+	printer.println("Questions? Email")
+	printer.println("SIGCoin-l@acm.illinois.edu")
 	# print some blank space so we can get a clean tear of the paper
 	printer.feed(3)
 	printer.sleep()      # Tell printer to sleep
